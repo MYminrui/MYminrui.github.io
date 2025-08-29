@@ -190,11 +190,30 @@
             margin-bottom: 30px;
             line-height: 1.5;
         }
+
+        .contact-options {
+            margin: 20px 0 30px;
+        }
+
+        .contact-option {
+            font-size: 15px;
+            color: #64748b;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .contact-icon {
+            font-size: 18px;
+        }
         
         .btn-group {
             display: flex;
             justify-content: space-around;
             gap: 15px;
+            flex-wrap: wrap;
         }
         
         .modal-btn {
@@ -206,7 +225,8 @@
             cursor: pointer;
             transition: all 0.3s ease;
             flex: 1;
-            max-width: 140px;
+            min-width: 140px;
+            max-width: 160px;
         }
         
         .cancel-btn {
@@ -221,15 +241,26 @@
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
         }
         
-        .confirm-btn {
+        .qq-btn {
             background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
             box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
         }
         
-        .confirm-btn:hover {
+        .qq-btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .wechat-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+        }
+        
+        .wechat-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
         }
 
         /* 网址器样式 */
@@ -451,12 +482,25 @@
     <div class="modal" id="contactModal">
         <div class="modal-content">
             <div class="avatar">
-                <img src="https://q1.qlogo.cn/g?b=qq&nk=3027065581&s=100" alt="开发者QQ头像">
+                <img src="https://q1.qlogo.cn/g?b=qq&nk=3027065581&s=100" alt="开发者头像">
             </div>
-            <p>是否联系开发者敏瑞？</p>
+            <p>选择联系开发者敏瑞的方式</p>
+            
+            <div class="contact-options">
+                <div class="contact-option">
+                    <span class="contact-icon">🐧</span>
+                    <span>QQ: 3027065581</span>
+                </div>
+                <div class="contact-option">
+                    <span class="contact-icon">📱</span>
+                    <span>微信: MY05180428MY</span>
+                </div>
+            </div>
+            
             <div class="btn-group">
                 <button class="modal-btn cancel-btn" id="cancelBtn">取消</button>
-                <button class="modal-btn confirm-btn" id="confirmBtn">确认</button>
+                <button class="modal-btn qq-btn" id="qqContactBtn">QQ联系</button>
+                <button class="modal-btn wechat-btn" id="wechatContactBtn">微信联系</button>
             </div>
         </div>
     </div>
@@ -466,7 +510,8 @@
         const contactDev = document.getElementById('contactDev');
         const contactModal = document.getElementById('contactModal');
         const cancelBtn = document.getElementById('cancelBtn');
-        const confirmBtn = document.getElementById('confirmBtn');
+        const qqContactBtn = document.getElementById('qqContactBtn');
+        const wechatContactBtn = document.getElementById('wechatContactBtn');
         const function1 = document.getElementById('function1');
         const function2 = document.getElementById('function2');
         const function3 = document.getElementById('function3');
@@ -593,8 +638,8 @@
             }
         });
 
-        // 确认联系，跳转到QQ搜索
-        confirmBtn.addEventListener('click', () => {
+        // QQ联系
+        qqContactBtn.addEventListener('click', () => {
             closeModal();
             const qqUrl = 'mqqapi://card/show_pslcard?src_type=internal&version=1&uin=3027065581&card_type=person&source=qrcode';
             window.location.href = qqUrl;
@@ -602,6 +647,36 @@
             setTimeout(() => {
                 window.open('https://wpa.qq.com/msgrd?v=3&uin=3027065581&site=qq&menu=yes', '_blank');
             }, 2000);
+        });
+
+        // 微信联系
+        wechatContactBtn.addEventListener('click', () => {
+            closeModal();
+            // 复制微信号到剪贴板
+            navigator.clipboard.writeText('MY05180428MY').then(() => {
+                // 显示提示
+                const toast = document.createElement('div');
+                toast.style.position = 'fixed';
+                toast.style.bottom = '30px';
+                toast.style.left = '50%';
+                toast.style.transform = 'translateX(-50%)';
+                toast.style.backgroundColor = 'rgba(0,0,0,0.7)';
+                toast.style.color = 'white';
+                toast.style.padding = '10px 20px';
+                toast.style.borderRadius = '30px';
+                toast.style.fontSize = '14px';
+                toast.style.zIndex = '9999';
+                toast.textContent = '微信号已复制到剪贴板';
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => {
+                        document.body.removeChild(toast);
+                    }, 300);
+                }, 2000);
+            });
         });
 
         // 其他功能点击事件
