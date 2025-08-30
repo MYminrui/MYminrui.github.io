@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>功能界面</title>
+    <title>功能界面 | 访问统计版</title>
     <style>
         * {
             margin: 0;
@@ -44,6 +44,14 @@
             font-size: 14px;
             margin-top: 8px;
             letter-spacing: 0.3px;
+        }
+
+        /* 访问统计样式 */
+        .visitor-count {
+            color: #3498db;
+            font-size: 16px;
+            margin-top: 15px;
+            animation: fadeIn 0.8s ease-out 0.2s backwards;
         }
         
         .menu-list {
@@ -426,6 +434,8 @@
         <div class="app-header">
             <h1 class="app-title">功能中心</h1>
             <p class="app-subtitle">选择您需要的功能</p>
+            <!-- 访问人数统计显示 -->
+            <p class="visitor-count" id="visitorCount">正在统计访问人数...</p>
         </div>
         
         <ul class="menu-list">
@@ -470,7 +480,6 @@
             
             <h3 class="url-subtitle" style="text-align: left; margin-bottom: 10px;">已添加的网址</h3>
             <ul class="urls-list" id="urlsList">
-                <!-- 网址列表将通过JS动态生成 -->
                 <div class="empty-state" id="emptyState">
                     暂无添加的网址，点击上方添加吧~
                 </div>
@@ -506,42 +515,65 @@
     </div>
 
     <script>
-        // 获取元素
-        const contactDev = document.getElementById('contactDev');
-        const contactModal = document.getElementById('contactModal');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const qqContactBtn = document.getElementById('qqContactBtn');
-        const wechatContactBtn = document.getElementById('wechatContactBtn');
+        // ========== MixIO 表格统计配置（已适配你的账号） ==========
+        const MIXIO_CONFIG = {
+            apiUrl: 'https://mixio.mixly.cn/api/v1',
+            apiKey: 'ae87fd22b6e7a085d027d4694de1f387', // 你的 MixIO 密钥
+            topic: 'visitor', // 表格组件的消息主题
+            projectName: 'myaaa' // 你的项目名称
+        };
+
+        // ========== 访问统计核心逻辑（纯前端 + MixIO 表格） ==========
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. 从本地存储读取历史访问次数（单设备计数，多设备需后端支持）
+            let localCount = localStorage.getItem('localVisitorCount') || '0';
+            localCount = parseInt(localCount) + 1;
+            localStorage.setItem('localVisitorCount', localCount.toString());
+
+            // 2. 格式化当前访问时间
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            // 3. 向 MixIO 表格组件发送访问数据（列：访问时间,次数）
+            try {
+                const res = await fetch(`${MIXIO_CONFIG.apiUrl}/publish`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-MixIO-Key': MIXIO_CONFIG.apiKey
+                    },
+                    body: JSON.stringify({
+                        topic: MIXIO_CONFIG.topic,
+                        message: `${timeStr},${localCount}` // 格式：“时间,次数”
+                    })
+                });
+
+                // 4. 更新页面显示
+                if (res.ok) {
+                    document.getElementById('visitorCount').textContent = `您是第 ${localCount} 位访问者`;
+                } else {
+                    document.getElementById('visitorCount').textContent = `访问统计（本地）：第 ${localCount} 位`;
+                    console.warn('MixIO 表格统计失败，仅显示本地计数');
+                }
+            } catch (err) {
+                document.getElementById('visitorCount').textContent = `访问统计（本地）：第 ${localCount} 位`;
+                console.error('MixIO 接口调用失败：', err);
+            }
+        });
+
+        // ========== 原有功能逻辑（保持不变） ==========
+        // 网址管理器
         const function1 = document.getElementById('function1');
-        const function2 = document.getElementById('function2');
-        const function3 = document.getElementById('function3');
         const urlManagerModal = document.getElementById('urlManagerModal');
         const urlForm = document.getElementById('urlForm');
         const urlsList = document.getElementById('urlsList');
         const emptyState = document.getElementById('emptyState');
-
-        // 存储网址数据
         let urls = JSON.parse(localStorage.getItem('savedUrls')) || [];
 
-        // 初始化网址列表
         function renderUrls() {
-            // 清空列表
-            while (urlsList.firstChild) {
-                urlsList.removeChild(urlsList.firstChild);
-            }
-
-            // 检查是否有网址
-            if (urls.length === 0) {
-                urlsList.appendChild(emptyState);
-                return;
-            }
-
-            // 隐藏空状态
-            if (emptyState.parentNode === urlsList) {
-                urlsList.removeChild(emptyState);
-            }
-
-            // 添加网址项
+            while (urlsList.firstChild) urlsList.removeChild(urlsList.firstChild);
+            if (urls.length === 0) { urlsList.appendChild(emptyState); return; }
+            if (emptyState.parentNode === urlsList) urlsList.removeChild(emptyState);
             urls.forEach((url, index) => {
                 const li = document.createElement('li');
                 li.className = 'url-item';
@@ -551,8 +583,6 @@
                 `;
                 urlsList.appendChild(li);
             });
-
-            // 添加删除事件
             document.querySelectorAll('.delete-url').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const index = parseInt(e.target.dataset.index);
@@ -563,53 +593,36 @@
             });
         }
 
-        // 打开网址器
         function1.addEventListener('click', () => {
             addClickEffect(function1);
             setTimeout(() => {
                 urlManagerModal.classList.add('active');
                 document.body.style.overflow = 'hidden';
-                renderUrls(); // 刷新列表
+                renderUrls();
             }, 300);
         });
 
-        // 提交表单添加网址
         urlForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            
             const urlName = document.getElementById('urlName').value.trim();
             let urlAddress = document.getElementById('urlAddress').value.trim();
-
-            // 验证网址格式，添加http://或https://
             if (!urlAddress.startsWith('http://') && !urlAddress.startsWith('https://')) {
                 urlAddress = 'https://' + urlAddress;
             }
-
-            // 添加到数组
             urls.push({ name: urlName, address: urlAddress });
-            
-            // 保存到本地存储
             localStorage.setItem('savedUrls', JSON.stringify(urls));
-            
-            // 重置表单
             urlForm.reset();
-            
-            // 重新渲染列表
             renderUrls();
-
-            // 添加成功动画反馈
             const addBtn = urlForm.querySelector('.add-url-btn');
             const originalText = addBtn.textContent;
             addBtn.textContent = '添加成功!';
             addBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
-            
             setTimeout(() => {
                 addBtn.textContent = originalText;
                 addBtn.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
             }, 1500);
         });
 
-        // 关闭网址器
         urlManagerModal.addEventListener('click', (e) => {
             if (e.target === urlManagerModal) {
                 urlManagerModal.classList.remove('active');
@@ -617,44 +630,40 @@
             }
         });
 
-        // 打开联系开发者弹窗
+        // 联系开发者
+        const contactDev = document.getElementById('contactDev');
+        const contactModal = document.getElementById('contactModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const qqContactBtn = document.getElementById('qqContactBtn');
+        const wechatContactBtn = document.getElementById('wechatContactBtn');
+
         contactDev.addEventListener('click', () => {
             contactModal.classList.add('active');
             document.body.style.overflow = 'hidden';
         });
 
-        // 关闭弹窗
         function closeModal() {
             contactModal.classList.remove('active');
             document.body.style.overflow = '';
         }
 
         cancelBtn.addEventListener('click', closeModal);
-
-        // 点击弹窗外部关闭弹窗
         contactModal.addEventListener('click', (e) => {
-            if (e.target === contactModal) {
-                closeModal();
-            }
+            if (e.target === contactModal) closeModal();
         });
 
-        // QQ联系
         qqContactBtn.addEventListener('click', () => {
             closeModal();
             const qqUrl = 'mqqapi://card/show_pslcard?src_type=internal&version=1&uin=3027065581&card_type=person&source=qrcode';
             window.location.href = qqUrl;
-            
             setTimeout(() => {
                 window.open('https://wpa.qq.com/msgrd?v=3&uin=3027065581&site=qq&menu=yes', '_blank');
             }, 2000);
         });
 
-        // 微信联系
         wechatContactBtn.addEventListener('click', () => {
             closeModal();
-            // 复制微信号到剪贴板
             navigator.clipboard.writeText('MY05180428MY').then(() => {
-                // 显示提示
                 const toast = document.createElement('div');
                 toast.style.position = 'fixed';
                 toast.style.bottom = '30px';
@@ -668,30 +677,26 @@
                 toast.style.zIndex = '9999';
                 toast.textContent = '微信号已复制到剪贴板';
                 document.body.appendChild(toast);
-                
                 setTimeout(() => {
                     toast.style.opacity = '0';
                     toast.style.transition = 'opacity 0.3s ease';
-                    setTimeout(() => {
-                        document.body.removeChild(toast);
-                    }, 300);
+                    setTimeout(() => document.body.removeChild(toast), 300);
                 }, 2000);
             });
         });
 
-        // 其他功能点击事件
+        // 其他功能
+        const function2 = document.getElementById('function2');
+        const function3 = document.getElementById('function3');
+
         function2.addEventListener('click', () => {
             addClickEffect(function2);
-            setTimeout(() => {
-                alert('功能二即将上线，敬请期待！');
-            }, 300);
+            setTimeout(() => alert('功能二即将上线，敬请期待！'), 300);
         });
 
         function3.addEventListener('click', () => {
             addClickEffect(function3);
-            setTimeout(() => {
-                alert('功能三即将上线，敬请期待！');
-            }, 300);
+            setTimeout(() => alert('功能三即将上线，敬请期待！'), 300);
         });
 
         // 点击反馈动画
